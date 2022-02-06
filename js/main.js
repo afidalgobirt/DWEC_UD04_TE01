@@ -1,9 +1,14 @@
 'use strict'
 
-window.onload = function() {
-    getTopConfirmedCountries();
-    getGlobalData();
-}
+const STATUS_CONFIRMED = 1;
+const STATUS_DEATHS = 2;
+
+var countryDetailsCasesCharts = new Array();
+var countryDetailsDeathsCharts = new Array();
+var countryStatusColor = new Array();
+
+getTopConfirmedCountries();
+getGlobalData();
 
 /**
  * Gets COVID-19 related data by country and displays it in graphs.
@@ -28,6 +33,8 @@ function getTopConfirmedCountries() {
                     countries[countries.length - 1].country = key;
                 }
             });
+
+            printDataTable(countries);
 
             // Sort array by confirmed cases in descending order.
             countries.sort(function(a, b) {return b.confirmed - a.confirmed});
@@ -87,7 +94,7 @@ function getGlobalData() {
 
             // Get encapsulated data.
             data = data[Object.keys(data)[0]];
-            data = data[Object.keys(data)[1]];
+            data = data['dates'];
             dataKeys = Object.keys(data);
             
             console.log("Global confirmed cases history:");
@@ -95,7 +102,7 @@ function getGlobalData() {
 
             // Calculate the difference between the last two data records.
             percentage = getIncreaseDecreasePercentage(data[dataKeys[1]], data[dataKeys[0]]);
-            percentageStr = getIncreaseDecreasePercentageStr(percentage);
+            percentageStr = getPercentageStr(percentage);
 
             // Set percentage indicator arrow orientation.
             kpiPercentageArrowElements[0].classList.add((percentage < 0) ? "downArrow" : "upArrow");
@@ -115,7 +122,7 @@ function getGlobalData() {
 
             // Get encapsulated data.
             data = data[Object.keys(data)[0]];
-            data = data[Object.keys(data)[1]];
+            data = data['dates'];
             dataKeys = Object.keys(data);
             
             console.log("Global confirmed deaths history:");
@@ -123,7 +130,7 @@ function getGlobalData() {
 
             // Calculate the difference between the last two data records.
             percentage = getIncreaseDecreasePercentage(data[dataKeys[1]], data[dataKeys[0]]);
-            percentageStr = getIncreaseDecreasePercentageStr(percentage);
+            percentageStr = getPercentageStr(percentage);
 
             // Set percentage indicator arrow orientation.
             kpiPercentageArrowElements[1].classList.add((percentage < 0) ? "downArrow" : "upArrow");
@@ -157,11 +164,21 @@ function getGlobalData() {
  * @returns Percentage in which the old value has changed.
  */
 function getIncreaseDecreasePercentage(oldValue, newValue, decimals = 2) {
+    return getPercentage(oldValue, oldValue - newValue, decimals);
+}
+
+/**
+ * Returns the percentage of a value over a base value.
+ * 
+ * @param {number} baseValue Value that's equal 100%.
+ * @param {number} value Value to calculate the percentage over baseValue.
+ * @param {number} decimals Number of decimals showed in the percentage.
+ * @returns The percentage of a value over a base value.
+ */
+function getPercentage(baseValue, value, decimals = 2) {
     let percentage;
 
-    percentage = oldValue - newValue;
-    percentage = percentage * 100;
-    percentage = percentage / oldValue;
+    percentage = (value * 100) / baseValue;
     percentage = percentage.toFixed(decimals);
 
     return percentage;
@@ -173,7 +190,7 @@ function getIncreaseDecreasePercentage(oldValue, newValue, decimals = 2) {
  * @param {number} percentage Number to be formatted.
  * @returns {string} String of a number formatted as a percentage.
  */
-function getIncreaseDecreasePercentageStr(percentage) {
+function getPercentageStr(percentage) {
     let percentageStr;
 
     if (percentage < 0) {
@@ -185,6 +202,293 @@ function getIncreaseDecreasePercentageStr(percentage) {
     return percentageStr;
 }
 
+function printDataTable(_data) {
+    let data = new Array();
+    let dataTable = document.getElementById('dataTable');
+    let tbody, tr, td;
+    let percentage;
+    let canvasContainer;
+    let canvas;
+    let detailsContainer;
+
+    data = _data;
+    tbody = document.createElement('tbody');
+
+    data.forEach((obj) => {
+        percentage = getPercentage(obj.population, obj.confirmed, 2);
+        countryStatusColor[obj.country] = {
+            cases: '',
+            deaths: ''
+        };
+
+        tr = document.createElement('tr');
+
+        td = document.createElement('td');
+        td.appendChild(document.createTextNode(obj.country));
+
+        td.style.borderLeftWidth = '4px';
+        td.style.borderLeftStyle = 'solid';
+
+        if (percentage <= 10) {
+            countryStatusColor[obj.country].cases = '#01B8AA';
+        } else if (percentage <= 25) {
+            countryStatusColor[obj.country].cases = '#F2C80F';
+        } else if (percentage <= 100) {
+            countryStatusColor[obj.country].cases = '#FD625E';
+        } else {
+            countryStatusColor[obj.country].cases = '#5F6B6D';
+        }
+
+        td.style.borderLeftColor = countryStatusColor[obj.country].cases;
+
+        tr.appendChild(td);
+
+        td = document.createElement('td');
+
+        if (obj.confirmed) {
+            td.appendChild(document.createTextNode(obj.confirmed.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")));
+        } else {
+            td.appendChild(document.createTextNode("Unknown"));
+            td.style.color = '#5F6B6D';
+            td.style.fontWeight = 'bold';
+        }
+        
+        tr.appendChild(td);
+
+        td = document.createElement('td');
+
+        td.style.fontWeight = 'bold';
+        if (percentage <= 10) {
+            td.style.color = '#01B8AA';
+        } else if (percentage <= 25) {
+            td.style.color = '#F2C80F';
+        } else {
+            td.style.color = '#FD625E';
+        }
+
+        if (percentage && !isNaN(percentage)) {
+            td.appendChild(document.createTextNode(getPercentageStr(percentage)));
+        } else {
+            td.appendChild(document.createTextNode("Unknown"));
+            td.style.color = '#5F6B6D';
+            td.style.fontWeight = 'bold';
+        }
+        
+        tr.appendChild(td);
+
+        td = document.createElement('td');
+
+        if (obj.deaths) {
+            td.appendChild(document.createTextNode(obj.deaths.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")));
+        } else {
+            td.appendChild(document.createTextNode("Unknown"));
+            td.style.color = '#5F6B6D';
+            td.style.fontWeight = 'bold';
+        }
+        
+        tr.appendChild(td);
+
+        percentage = getPercentage(obj.confirmed, obj.deaths, 2);
+        td = document.createElement('td');
+
+        if (percentage <= 10) {
+            countryStatusColor[obj.country].deaths = '#01B8AA';
+        } else if (percentage <= 25) {
+            countryStatusColor[obj.country].deaths = '#F2C80F';
+        } else {
+            countryStatusColor[obj.country].deaths = '#FD625E';
+        }
+
+        td.style.color = countryStatusColor[obj.country].deaths;
+        td.style.fontWeight = 'bold';
+
+        if (percentage) {
+            td.appendChild(document.createTextNode(getPercentageStr(percentage)));
+        } else {
+            td.appendChild(document.createTextNode("Unknown"));
+            td.style.color = '#5F6B6D';
+            td.style.fontWeight = 'bold';
+        }
+        
+        tr.appendChild(td);
+
+        td = document.createElement('td');
+
+        if (obj.population) {
+            td.appendChild(document.createTextNode(obj.population.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ".")));
+        } else {
+            td.appendChild(document.createTextNode("Unknown"));
+            td.style.color = '#5F6B6D';
+            td.style.fontWeight = 'bold';
+        }
+        
+        tr.appendChild(td);
+        tr.classList.add('clickableRow');
+        tr.onclick = dataTableRowClicked;
+
+        tbody.appendChild(tr);
+
+        // Add hidden details row.
+        tr = document.createElement('tr');
+        tr.classList.add('detailsRow');
+        tr.style.display = 'none';
+        tr.style.borderLeftColor = countryStatusColor[obj.country].cases;
+        tr.style.borderLeftWidth = '4px';
+        tr.style.borderLeftStyle = 'solid';
+
+        td = document.createElement('td');
+        td.colSpan = 6;
+
+        detailsContainer = document.createElement('div');
+        detailsContainer.classList.add('detailsChartContainer');
+
+        canvasContainer = document.createElement('div');
+        canvasContainer.classList.add('chartContainer');
+
+        canvas = document.createElement('canvas');
+        canvas.id = obj.country + "DetailCasesChart";
+        canvasContainer.appendChild(canvas);
+        detailsContainer.appendChild(canvasContainer);
+
+        canvasContainer = document.createElement('div');
+        canvasContainer.classList.add('chartContainer');
+
+        canvas = document.createElement('canvas');
+        canvas.id = obj.country + "DetailDeathsChart";
+        canvasContainer.appendChild(canvas);
+        detailsContainer.appendChild(canvasContainer);
+
+        td.appendChild(detailsContainer);
+        tr.appendChild(td);
+
+        tbody.appendChild(tr);
+    });
+
+    dataTable.appendChild(tbody);
+}
+
+function dataTableRowClicked(event) {
+    var row = event.target.parentElement;
+    var detailsRow = row.nextSibling;
+    var country = row.firstChild.textContent;
+
+    if (detailsRow.style.display == 'none') {
+        detailsRow.style.display = '';
+
+        if (!countryDetailsCasesCharts[country]) {
+            printDetailsCharts(country, STATUS_CONFIRMED);
+        }
+
+        if (!countryDetailsDeathsCharts[country]) {
+            printDetailsCharts(country, STATUS_DEATHS);
+        }
+    } else {
+        detailsRow.style.display = 'none';
+    }
+}
+
+function printDetailsCharts(country, status) {
+    let url = "https://covid-api.mmediagroup.fr/v1/history?country=" + country + "&status=";
+    
+    switch (status) {
+        case STATUS_CONFIRMED:
+            url += "confirmed";
+            break;
+        case STATUS_DEATHS:
+            url += "deaths";
+            break;
+    }
+
+    fetch(url)
+        .then((response) => response.json())
+        .then((data) => {
+            let keys = new Array();
+            let chartLabels = new Array();
+            let chartData = new Array();
+            let date;
+            let dateStr;
+
+            data = data[Object.keys(data)[0]];
+            data = data['dates'];
+
+            keys = Object.keys(data);
+            date = new Date(keys[0]);
+            date.setDate(1);
+            dateStr = date.toLocaleDateString();
+
+            for (let key of keys) {
+                if (new Date(key).toLocaleDateString() == dateStr) {
+                    chartLabels.push(dateStr);
+                    chartData.push(data[key]);
+
+                    if (chartData.length == 10) {
+                        break;
+                    }
+
+                    date.setMonth(date.getMonth() - 1);
+                    date.setDate(1);
+                    dateStr = date.toLocaleDateString();
+                }
+            }
+
+            chartLabels = chartLabels.reverse();
+            chartData = chartData.reverse();
+
+            printCountryDetailsCharts(chartLabels, chartData, country, status);
+        });
+}
+
+function printCountryDetailsCharts(labels, data, country, status) {
+    let canvasId;
+    let datasetLabel;
+    let title;
+
+    switch (status) {
+        case STATUS_CONFIRMED:
+            datasetLabel = "COVID-19 Confirmed cases (" + country + ")";
+            title = "Confirmed cases over the las months in " + country;
+            canvasId = country + "DetailCasesChart";
+            break;
+        case STATUS_DEATHS:
+            datasetLabel = "COVID-19 Confirmed deaths (" + country + ")";
+            title = "Confirmed deaths over the las months in " + country;
+            canvasId = country + "DetailDeathsChart";
+            break;
+    }
+
+    const ctx = document.getElementById(canvasId).getContext('2d');
+
+    countryDetailsCasesCharts[country] = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: datasetLabel,
+                data: data,
+                backgroundColor: countryStatusColor[country].cases,
+            }]
+        },
+        options: {
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            },
+            responsive: true,
+            maintainAspectRatio: true,
+            plugins: {
+                title: {
+                    display: true,
+                    text: title,
+                    font: {
+                        size: 16
+                    }
+                }
+            }
+        },
+    });
+}
+
 function printConfirmedCountriesChart(labels, data, date) {
     const ctx = document.getElementById('topConfirmedCountriesChart').getContext('2d');
     const topConfirmedCountriesChart = new Chart(ctx, {
@@ -192,7 +496,7 @@ function printConfirmedCountriesChart(labels, data, date) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'COVID Confirmed cases / Country (' + date + ')',
+                label: 'COVID-19 Confirmed cases / Country (' + date + ')',
                 data: data,
                 backgroundColor: [
                     '#01B8AA',
@@ -217,7 +521,7 @@ function printConfirmedCountriesChart(labels, data, date) {
                     display: true,
                     text: 'Top 5 countries with most confirmed COVID-19 cases',
                     font: {
-                        size: 20
+                        size: 18
                     }
                 }
             }
@@ -232,7 +536,7 @@ function printDeathsCountriesChart(labels, data, date) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'COVID Confirmed deaths / Country (' + date + ')',
+                label: 'COVID-19 Confirmed deaths / Country (' + date + ')',
                 data: data,
                 backgroundColor: [
                     '#01B8AA',
@@ -257,7 +561,7 @@ function printDeathsCountriesChart(labels, data, date) {
                     display: true,
                     text: 'Top 5 countries with most confirmed deaths by COVID-19',
                     font: {
-                        size: 20
+                        size: 18
                     }
                 }
             }

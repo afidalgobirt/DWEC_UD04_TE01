@@ -11,6 +11,7 @@
         <main>
             <section id="summary">
                 <h1>World Health Organization: COVID-19 stats dashboard</h1>
+                <h2>Global stats:</h2>
                 <div id="kpiContainer">
                     <div class="kpi">
                         <div>
@@ -45,11 +46,31 @@
                         </div>
                     </div>
                 </div>
-                <div id="topConfirmedCountriesChartContainer" class="chartContainer">
-                    <canvas id="topConfirmedCountriesChart"></canvas>
+                <h2>Top countries' stats:</h2>
+                <div class="chartWrapper">
+                    <div id="topConfirmedCountriesChartContainer" class="chartContainer">
+                        <canvas id="topConfirmedCountriesChart"></canvas>
+                    </div>
+                    <div id="topDeathsCountriesChartContainer" class="chartContainer">
+                        <canvas id="topDeathsCountriesChart"></canvas>
+                    </div>
                 </div>
-                <div id="topDeathsCountriesChartContainer" class="chartContainer">
-                    <canvas id="topDeathsCountriesChart"></canvas>
+            </section>
+            <section id="dataList">
+                <h2>COVID-19 stats per country:</h2>
+                <div class="roundedTableContainer">
+                    <table id="dataTable">
+                        <thead>
+                            <tr>
+                                <th>Country</th>
+                                <th>Cases</th>
+                                <th>Cases / Population (%)</th>
+                                <th>Deaths</th>
+                                <th>Deaths / Cases (%)</th>
+                                <th>Population</th>
+                            </tr>
+                        </thead>
+                    </table>
                 </div>
             </section>
         </main>
