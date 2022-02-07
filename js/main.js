@@ -458,7 +458,7 @@ function printCountryDetailsCharts(labels, data, country, status) {
 
     const ctx = document.getElementById(canvasId).getContext('2d');
 
-    countryDetailsCasesCharts[country] = new Chart(ctx, {
+    const chart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: labels,
@@ -487,6 +487,15 @@ function printCountryDetailsCharts(labels, data, country, status) {
             }
         },
     });
+
+    switch (status) {
+        case STATUS_CONFIRMED:
+            countryDetailsCasesCharts[country] = chart;
+            break;
+        case STATUS_DEATHS:
+            countryDetailsDeathsCharts[country] = chart;
+            break;
+    }
 }
 
 function printConfirmedCountriesChart(labels, data, date) {
