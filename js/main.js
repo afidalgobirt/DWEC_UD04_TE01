@@ -178,8 +178,12 @@ function getIncreaseDecreasePercentage(oldValue, newValue, decimals = 2) {
 function getPercentage(baseValue, value, decimals = 2) {
     let percentage;
 
-    percentage = (value * 100) / baseValue;
-    percentage = percentage.toFixed(decimals);
+    if (!baseValue || !value) {
+        percentage =  NaN;
+    } else {
+        percentage = (value * 100) / baseValue;
+        percentage = percentage.toFixed(decimals);
+    }
 
     return percentage;
 }
@@ -193,7 +197,9 @@ function getPercentage(baseValue, value, decimals = 2) {
 function getPercentageStr(percentage) {
     let percentageStr;
 
-    if (percentage < 0) {
+    if (isNaN(percentage) || !isFinite(percentage)) {
+        percentageStr = "Unknown";
+    } else if (percentage < 0) {
         percentageStr = "- " + (percentage * (-1)).toString() + "%";
     } else {
         percentageStr = percentage.toString() + "%";
@@ -215,6 +221,7 @@ function printDataTable(_data) {
     tbody = document.createElement('tbody');
 
     data.forEach((obj) => {
+        // Get Cases / Population percentage.
         percentage = getPercentage(obj.population, obj.confirmed, 2);
         countryStatusColor[obj.country] = {
             cases: '',
@@ -223,6 +230,7 @@ function printDataTable(_data) {
 
         tr = document.createElement('tr');
 
+        // Insert data for column Country.
         td = document.createElement('td');
         td.appendChild(document.createTextNode(obj.country));
 
@@ -243,6 +251,7 @@ function printDataTable(_data) {
 
         tr.appendChild(td);
 
+        // Insert data for column Cases.
         td = document.createElement('td');
 
         if (obj.confirmed) {
@@ -255,27 +264,16 @@ function printDataTable(_data) {
         
         tr.appendChild(td);
 
+        // Insert data for column Cases / Population (%).
         td = document.createElement('td');
 
         td.style.fontWeight = 'bold';
-        if (percentage <= 10) {
-            td.style.color = '#01B8AA';
-        } else if (percentage <= 25) {
-            td.style.color = '#F2C80F';
-        } else {
-            td.style.color = '#FD625E';
-        }
+        td.style.color = countryStatusColor[obj.country].cases;
 
-        if (percentage && !isNaN(percentage)) {
-            td.appendChild(document.createTextNode(getPercentageStr(percentage)));
-        } else {
-            td.appendChild(document.createTextNode("Unknown"));
-            td.style.color = '#5F6B6D';
-            td.style.fontWeight = 'bold';
-        }
-        
+        td.appendChild(document.createTextNode(getPercentageStr(percentage)));
         tr.appendChild(td);
 
+        // Insert data for column Deaths.
         td = document.createElement('td');
 
         if (obj.deaths) {
@@ -288,30 +286,28 @@ function printDataTable(_data) {
         
         tr.appendChild(td);
 
-        percentage = getPercentage(obj.confirmed, obj.deaths, 2);
+        // Insert data for column Deaths / Cases (%).
         td = document.createElement('td');
+        // Get Deaths / Cases percentage.
+        percentage = getPercentage(obj.confirmed, obj.deaths, 2);
 
         if (percentage <= 10) {
             countryStatusColor[obj.country].deaths = '#01B8AA';
         } else if (percentage <= 25) {
             countryStatusColor[obj.country].deaths = '#F2C80F';
-        } else {
+        } else if (percentage <= 100) {
             countryStatusColor[obj.country].deaths = '#FD625E';
+        } else {
+            countryStatusColor[obj.country].deaths = '#5F6B6D';
         }
 
         td.style.color = countryStatusColor[obj.country].deaths;
         td.style.fontWeight = 'bold';
 
-        if (percentage) {
-            td.appendChild(document.createTextNode(getPercentageStr(percentage)));
-        } else {
-            td.appendChild(document.createTextNode("Unknown"));
-            td.style.color = '#5F6B6D';
-            td.style.fontWeight = 'bold';
-        }
-        
+        td.appendChild(document.createTextNode(getPercentageStr(percentage)));
         tr.appendChild(td);
 
+        // Insert data for column Population.
         td = document.createElement('td');
 
         if (obj.population) {
@@ -323,9 +319,12 @@ function printDataTable(_data) {
         }
         
         tr.appendChild(td);
+
+        // Make row clickable to show details in hidden row.
         tr.classList.add('clickableRow');
         tr.onclick = dataTableRowClicked;
 
+        // Add row to the table.
         tbody.appendChild(tr);
 
         // Add hidden details row.
